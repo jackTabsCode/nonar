@@ -1,5 +1,5 @@
 use crate::{
-    chatmix::ChatMix,
+    chatmix::{ChatMix, ChatMixBackend},
     device::{Device, DeviceKind},
 };
 use anyhow::bail;
@@ -12,12 +12,22 @@ mod chatmix;
 mod device;
 
 fn main() -> anyhow::Result<()> {
-    let journald = tracing_journald::layer()?;
+    #[cfg(target_os = "linux")]
+    {
+        let journald = tracing_journald::layer()?;
+        tracing_subscriber::registry()
+            .with(EnvFilter::from_default_env())
+            .with(journald)
+            .init();
+    }
 
-    tracing_subscriber::registry()
-        .with(EnvFilter::from_default_env())
-        .with(journald)
-        .init();
+    #[cfg(not(target_os = "linux"))]
+    {
+        tracing_subscriber::fmt()
+            .with_env_filter(EnvFilter::from_default_env())
+            .with_target(false)
+            .init();
+    }
 
     info!("Starting Nonar");
 
