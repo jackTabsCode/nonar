@@ -5,18 +5,31 @@ use crate::{
 use anyhow::bail;
 use hidapi::HidApi;
 use std::sync::atomic::Ordering;
+use tracing::{debug, info};
+use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
 mod chatmix;
 mod device;
 
 fn main() -> anyhow::Result<()> {
+    let journald = tracing_journald::layer()?;
+
+    tracing_subscriber::registry()
+        .with(EnvFilter::from_default_env())
+        .with(journald)
+        .init();
+
+    info!("Starting Nonar");
+
     let api = HidApi::new()?;
 
     let supported = [DeviceKind::NovaProWireless];
 
     let mut dev: Option<Box<dyn Device>> = None;
     for kind in supported {
+        debug!("Probing device: {:?}", kind);
         if let Ok(d) = kind.probe(&api) {
+            info!("Found device: {:?}", kind);
             dev = Some(d);
             break;
         }
@@ -25,6 +38,7 @@ fn main() -> anyhow::Result<()> {
     if let Some(dev) = dev {
         let close = dev.close_handle();
         ctrlc::set_handler(move || {
+            info!("Received ctrl-c");
             close.store(true, Ordering::SeqCst);
         })?;
 

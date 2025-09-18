@@ -1,14 +1,18 @@
 use std::process::{Child, Command};
 
+use tracing::{info, trace};
+
 const CMD_PACTL: &str = "pactl";
 const CMD_PWLOOPBACK: &str = "pw-loopback";
 
+#[derive(Debug)]
 pub struct SinkNames {
     pub output: &'static str,
     pub game: &'static str,
     pub chat: &'static str,
 }
 
+#[derive(Debug)]
 pub struct ChatMix {
     names: SinkNames,
     game_proc: Child,
@@ -17,6 +21,8 @@ pub struct ChatMix {
 
 impl ChatMix {
     pub fn new(names: SinkNames) -> anyhow::Result<Self> {
+        info!("Creating sinks: {:?}", names);
+
         let game_proc = Command::new(CMD_PWLOOPBACK)
             .args([
                 "-P",
@@ -45,8 +51,11 @@ impl ChatMix {
     }
 
     pub fn set_volumes(&self, game: u8, chat: u8) -> anyhow::Result<()> {
+        trace!("Setting volumes: game={}, chat={}", game, chat);
+
         self.set_sink_volume(self.names.game, game)?;
         self.set_sink_volume(self.names.chat, chat)?;
+
         Ok(())
     }
 

@@ -8,3 +8,6 @@ anyhow = "1.0.99"
 ctrlc = { version = "3.5.0", features = ["termination"] }
 hidapi = "2.6.3"
 pulsectl-rs = "0.3.2"
+tracing = "0.1.41"
+tracing-journald = "0.3.1"
+tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }

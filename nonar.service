@@ -5,8 +5,9 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=%h/.cargo/bin/chatmix
+ExecStart=%h/.cargo/bin/nonar
 Restart=on-failure
+Environment=RUST_LOG=nonar=debug
 
 [Install]
 WantedBy=default.target

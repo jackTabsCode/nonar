@@ -2,6 +2,7 @@ use crate::{chatmix::SinkNames, device::Device};
 use anyhow::Context;
 use hidapi::{HidApi, HidDevice};
 use std::sync::{Arc, atomic::AtomicBool};
+use tracing::debug;
 
 pub struct NovaProWireless {
     dev: HidDevice,
@@ -81,6 +82,9 @@ impl Device for NovaProWireless {
 
         let gamevol = buf[2];
         let chatvol = buf[3];
+
+        debug!("Received volumes: game={}, chat={}", gamevol, chatvol);
+
         Ok(Some((gamevol, chatvol)))
     }
 

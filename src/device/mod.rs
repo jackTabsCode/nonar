@@ -20,6 +20,7 @@ pub trait Device {
     fn close_handle(&self) -> Arc<AtomicBool>;
 }
 
+#[derive(Debug)]
 pub enum DeviceKind {
     NovaProWireless,
 }
