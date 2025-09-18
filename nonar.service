@@ -1,0 +1,12 @@
+[Unit]
+Description=ChatMix without the Sonar
+After=pipewire.service pipewire-pulse.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.cargo/bin/chatmix
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
