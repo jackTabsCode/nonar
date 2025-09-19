@@ -1,14 +1,13 @@
-use tracing::{info, trace};
-
 use crate::chatmix::{ChatMixBackend, SinkNames};
+use crate::{CHAT_SINK_NAME, GAME_SINK_NAME};
 use std::process::{Child, Command};
+use tracing::{info, trace};
 
 const CMD_PACTL: &str = "pactl";
 const CMD_PWLOOPBACK: &str = "pw-loopback";
 
 #[derive(Debug)]
 pub struct ChatMix {
-    names: SinkNames,
     game_proc: Child,
     chat_proc: Child,
 }
@@ -27,26 +26,26 @@ impl ChatMix {
 }
 
 impl ChatMixBackend for ChatMix {
-    fn new(names: SinkNames) -> anyhow::Result<Self> {
-        info!("Creating sinks: {:?}", names);
+    fn new(output_name: &'static str) -> anyhow::Result<Self> {
+        info!("Creating sinks: {names:?}");
 
         let game_proc = Command::new(CMD_PWLOOPBACK)
             .args([
                 "-P",
-                names.output,
+                output_name,
                 "--capture-props=media.class=Audio/Sink",
                 "-n",
-                names.game,
+                GAME_SINK_NAME,
             ])
             .spawn()?;
 
         let chat_proc = Command::new(CMD_PWLOOPBACK)
             .args([
                 "-P",
-                names.output,
+                output_name,
                 "--capture-props=media.class=Audio/Sink",
                 "-n",
-                names.chat,
+                CHAT_SINK_NAME,
             ])
             .spawn()?;
 
@@ -58,18 +57,11 @@ impl ChatMixBackend for ChatMix {
     }
 
     fn set_volumes(&self, game: u8, chat: u8) -> anyhow::Result<()> {
-        trace!("Setting volumes: game={}, chat={}", game, chat);
+        trace!("Setting volumes: game={game}, chat={chat}");
 
-        self.set_sink_volume(self.names.game, game)?;
-        self.set_sink_volume(self.names.chat, chat)?;
+        self.set_sink_volume(GAME_SINK_NAME, game)?;
+        self.set_sink_volume(CHAT_SINK_NAME, chat)?;
 
         Ok(())
-    }
-}
-
-impl Drop for ChatMix {
-    fn drop(&mut self) {
-        let _ = self.game_proc.kill();
-        let _ = self.chat_proc.kill();
     }
 }

@@ -7,7 +7,6 @@ Wants=network-online.target
 Type=simple
 ExecStart=%h/.cargo/bin/nonar
 Restart=on-failure
-Environment=RUST_LOG=nonar=debug
 
 [Install]
 WantedBy=default.target

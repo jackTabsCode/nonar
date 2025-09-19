@@ -1,16 +1,9 @@
 pub trait ChatMixBackend {
-    fn new(names: SinkNames) -> anyhow::Result<Self>
+    fn new(output_name: &'static str) -> anyhow::Result<Self>
     where
         Self: Sized;
 
     fn set_volumes(&self, game: u8, chat: u8) -> anyhow::Result<()>;
-}
-
-#[derive(Debug)]
-pub struct SinkNames {
-    pub output: &'static str,
-    pub game: &'static str,
-    pub chat: &'static str,
 }
 
 #[cfg(target_os = "linux")]

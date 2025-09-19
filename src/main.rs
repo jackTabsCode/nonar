@@ -8,6 +8,9 @@ use std::sync::atomic::Ordering;
 use tracing::{debug, info};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
+pub const CHAT_SINK_NAME: &str = "NonarChat";
+pub const GAME_SINK_NAME: &str = "NonarGame";
+
 mod chatmix;
 mod device;
 
@@ -16,16 +19,16 @@ fn main() -> anyhow::Result<()> {
     {
         let journald = tracing_journald::layer()?;
         tracing_subscriber::registry()
-            .with(EnvFilter::from_default_env())
+            .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("debug")))
             .with(journald)
             .init();
     }
 
     #[cfg(not(target_os = "linux"))]
     {
-        tracing_subscriber::fmt()
-            .with_env_filter(EnvFilter::from_default_env())
-            .with_target(false)
+        tracing_subscriber::registry()
+            .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("debug")))
+            .with(tracing_subscriber::fmt::layer())
             .init();
     }
 
@@ -61,7 +64,7 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn run_device(dev: &dyn Device) -> anyhow::Result<()> {
-    let chatmix = ChatMix::new(dev.sink_names())?;
+    let chatmix = ChatMix::new(dev.output_name())?;
     dev.enable()?;
 
     let close = dev.close_handle();
