@@ -1,4 +1,3 @@
-use crate::chatmix::SinkNames;
 use hidapi::HidApi;
 use nova_pro_wireless::NovaProWireless;
 use std::sync::{Arc, atomic::AtomicBool};
@@ -15,7 +14,7 @@ pub trait Device {
 
     fn poll_volumes(&self) -> anyhow::Result<Option<(u8, u8)>>;
 
-    fn sink_names(&self) -> SinkNames;
+    fn output_name(&self) -> &'static str;
 
     fn close_handle(&self) -> Arc<AtomicBool>;
 }

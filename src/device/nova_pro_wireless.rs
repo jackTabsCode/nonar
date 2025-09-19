@@ -1,4 +1,4 @@
-use crate::{chatmix::SinkNames, device::Device};
+use crate::device::Device;
 use anyhow::Context;
 use hidapi::{HidApi, HidDevice};
 use std::sync::{Arc, atomic::AtomicBool};
@@ -88,12 +88,8 @@ impl Device for NovaProWireless {
         Ok(Some((gamevol, chatvol)))
     }
 
-    fn sink_names(&self) -> crate::chatmix::SinkNames {
-        SinkNames {
-            output: "SteelSeries_Arctis_Nova_Pro_Wireless",
-            game: "NovaProWirelessGame",
-            chat: "NovaProWirelessChat",
-        }
+    fn output_name(&self) -> &'static str {
+        "SteelSeries_Arctis_Nova_Pro_Wireless"
     }
 
     fn close_handle(&self) -> Arc<AtomicBool> {
