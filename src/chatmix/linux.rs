@@ -64,3 +64,10 @@ impl ChatMixBackend for ChatMix {
         Ok(())
     }
 }
+
+impl Drop for ChatMix {
+    fn drop(&mut self) {
+        let _ = self.game_proc.kill();
+        let _ = self.chat_proc.kill();
+    }
+}
