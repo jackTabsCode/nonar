@@ -27,8 +27,6 @@ impl ChatMix {
 
 impl ChatMixBackend for ChatMix {
     fn new(output_name: &'static str) -> anyhow::Result<Self> {
-        info!("Creating sinks: {names:?}");
-
         let game_proc = Command::new(CMD_PWLOOPBACK)
             .args([
                 "-P",
@@ -48,6 +46,8 @@ impl ChatMixBackend for ChatMix {
                 CHAT_SINK_NAME,
             ])
             .spawn()?;
+
+        info!("Created sinks");
 
         Ok(Self {
             game_proc,
