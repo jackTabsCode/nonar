@@ -1,4 +1,4 @@
-use crate::chatmix::{ChatMixBackend, SinkNames};
+use crate::chatmix::ChatMixBackend;
 use crate::{CHAT_SINK_NAME, GAME_SINK_NAME};
 use std::process::{Child, Command};
 use tracing::{info, trace};
@@ -50,7 +50,6 @@ impl ChatMixBackend for ChatMix {
             .spawn()?;
 
         Ok(Self {
-            names,
             game_proc,
             chat_proc,
         })
