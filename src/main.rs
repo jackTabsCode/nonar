@@ -16,21 +16,18 @@ mod device;
 
 fn main() -> anyhow::Result<()> {
     #[cfg(target_os = "linux")]
-    {
-        let journald = tracing_journald::layer()?;
-        tracing_subscriber::registry()
-            .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("debug")))
-            .with(journald)
-            .init();
-    }
+    let journald = tracing_journald::layer()?;
+
+    let registry = tracing_subscriber::registry()
+        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("debug")));
+
+    #[cfg(target_os = "linux")]
+    let registry = registry.with(journald);
 
     #[cfg(not(target_os = "linux"))]
-    {
-        tracing_subscriber::registry()
-            .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("debug")))
-            .with(tracing_subscriber::fmt::layer())
-            .init();
-    }
+    let registry = registry.with(tracing_subscriber::fmt::layer());
+
+    registry.init();
 
     info!("Starting Nonar");
 
@@ -57,6 +54,7 @@ fn main() -> anyhow::Result<()> {
 
         run_device(&*dev)?;
     } else {
+        send_notification("No supported device found");
         bail!("No supported device found");
     }
 
@@ -67,6 +65,8 @@ fn run_device(dev: &dyn Device) -> anyhow::Result<()> {
     let chatmix = ChatMix::new(dev.output_name())?;
     dev.enable()?;
 
+    send_notification("ChatMix is now running!");
+
     let close = dev.close_handle();
 
     loop {
@@ -74,12 +74,22 @@ fn run_device(dev: &dyn Device) -> anyhow::Result<()> {
             break;
         }
 
-        if let Some((game, chat)) = dev.poll_volumes()? {
-            chatmix.set_volumes(game, chat)?;
+        if let Some((game, chat)) = dev.poll_volumes()?
+            && let Err(err) = chatmix.set_volumes(game, chat)
+        {
+            send_notification("Failed to set ChatMix volumes!");
+            return Err(err);
         }
     }
 
     dev.disable()?;
 
     Ok(())
+}
+
+fn send_notification(body: &str) {
+    let _ = notify_rust::Notification::new()
+        .summary("Nonar")
+        .body(body)
+        .show();
 }
