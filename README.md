@@ -53,10 +53,10 @@ Once you've installed and set up Loopback, create two new virtual devices: `Nona
 Then, add and enable the launchd service:
 
 ```bash
-cp macos/io.jackt.nonar.plist ~/Library/LaunchAgents/
+cp macos/nonar.plist ~/Library/LaunchAgents/
 
-launchctl load io.jackt.nonar
-launchctl start io.jackt.nonar
+launchctl load nonar
+launchctl start nonar
 ```
 
 ## Troubleshooting
