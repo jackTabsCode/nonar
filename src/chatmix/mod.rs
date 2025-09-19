@@ -10,10 +10,10 @@ pub trait ChatMixBackend {
 mod linux;
 
 #[cfg(target_os = "linux")]
-pub type ChatMix = linux::ChatMix;
+pub use self::linux::ChatMix;
 
 #[cfg(target_os = "macos")]
 mod macos;
 
 #[cfg(target_os = "macos")]
-pub type ChatMix = macos::ChatMix;
+pub use self::macos::ChatMix;
