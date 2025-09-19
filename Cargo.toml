@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.99"
 ctrlc = { version = "3.5.0", features = ["termination"] }
-hidapi = "2.6.3"
+hidapi = { version = "2.6.3", default-features = false, features = ["linux-static-hidraw", "macos-shared-device", "windows-native"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 
