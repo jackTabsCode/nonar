@@ -1,5 +1,4 @@
-use crate::device::Device;
-use anyhow::Context;
+use crate::{device::Device, error::DeviceError};
 use hidapi::{HidApi, HidDevice};
 use std::sync::{Arc, atomic::AtomicBool};
 use tracing::debug;
@@ -23,27 +22,26 @@ impl NovaProWireless {
     const OPT_CHATMIX_ENABLE: u8 = 0x49;
     const OPT_SONAR_ICON: u8 = 0x8D;
 
-    fn write_msg(&self, bytes: &[u8]) -> anyhow::Result<()> {
+    fn write_msg(&self, bytes: &[u8]) -> Result<(), DeviceError> {
         let mut data = [0u8; Self::MSGLEN];
         let len = bytes.len().min(Self::MSGLEN);
         data[..len].copy_from_slice(bytes);
 
-        self.dev.write(&data).context("Failed to write message")?;
-
+        self.dev.write(&data)?;
         Ok(())
     }
 
-    fn set_chatmix(&self, state: bool) -> anyhow::Result<()> {
+    fn set_chatmix(&self, state: bool) -> Result<(), DeviceError> {
         self.write_msg(&[Self::TX, Self::OPT_CHATMIX_ENABLE, state as u8])
     }
 
-    fn set_sonar_icon(&self, state: bool) -> anyhow::Result<()> {
+    fn set_sonar_icon(&self, state: bool) -> Result<(), DeviceError> {
         self.write_msg(&[Self::TX, Self::OPT_SONAR_ICON, state as u8])
     }
 }
 
 impl Device for NovaProWireless {
-    fn new(api: &HidApi) -> anyhow::Result<Self> {
+    fn new(api: &HidApi) -> Result<Self, DeviceError> {
         let dev = api
             .device_list()
             .find(|d| {
@@ -51,9 +49,8 @@ impl Device for NovaProWireless {
                     && d.product_id() == Self::PID
                     && d.interface_number() == Self::INTERFACE
             })
-            .context("Device not found")?
-            .open_device(api)
-            .context("Failed to open device")?;
+            .ok_or(DeviceError::NotFound)?
+            .open_device(api)?;
 
         Ok(Self {
             dev,
@@ -61,19 +58,19 @@ impl Device for NovaProWireless {
         })
     }
 
-    fn enable(&self) -> anyhow::Result<()> {
+    fn enable(&self) -> Result<(), DeviceError> {
         self.set_sonar_icon(true)?;
         self.set_chatmix(true)?;
         Ok(())
     }
 
-    fn disable(&self) -> anyhow::Result<()> {
+    fn disable(&self) -> Result<(), DeviceError> {
         self.set_sonar_icon(false)?;
         self.set_chatmix(false)?;
         Ok(())
     }
 
-    fn poll_volumes(&self) -> anyhow::Result<Option<(u8, u8)>> {
+    fn poll_volumes(&self) -> Result<Option<(u8, u8)>, DeviceError> {
         let mut buf = [0u8; Self::MSGLEN];
         let n = self.dev.read_timeout(&mut buf, Self::READ_TIMEOUT)?;
         if n == 0 || buf[1] != Self::OPT_CHATMIX {

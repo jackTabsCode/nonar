@@ -1,11 +1,12 @@
 use crate::{
     chatmix::{ChatMix, ChatMixBackend},
     device::{Device, DeviceKind},
+    error::{DeviceError, Error},
 };
 use hidapi::HidApi;
 use notify_rust::Notification;
 use std::{sync::atomic::Ordering, thread, time::Duration};
-use tracing::{debug, info, trace, warn};
+use tracing::{debug, error, info, trace, warn};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
 pub const CHAT_SINK_NAME: &str = "NonarChat";
@@ -13,8 +14,9 @@ pub const GAME_SINK_NAME: &str = "NonarGame";
 
 mod chatmix;
 mod device;
+mod error;
 
-fn main() -> anyhow::Result<()> {
+fn main() -> Result<(), Error> {
     #[cfg(target_os = "linux")]
     let journald = tracing_journald::layer()?;
 
@@ -31,28 +33,33 @@ fn main() -> anyhow::Result<()> {
 
     info!("Starting Nonar");
 
-    let api = HidApi::new()?;
+    let mut api = HidApi::new().map_err(DeviceError::Hid)?;
 
     loop {
         match try_probe(&api) {
             Some((dev, kind)) => {
-                info!("Found device: {kind:?}");
+                info!("{kind:?} found");
 
                 let close = dev.close_handle();
+
                 if let Err(e) = run_device(&*dev, &kind) {
-                    debug!("run_device failed: {e:?}");
+                    error!("run_device failed: {e:?}");
+
+                    if let Error::ChatMix(_) = e {
+                        std::process::exit(1);
+                    }
                 }
 
-                notify(&format!("{kind} connected"));
-
-                info!("Device disconnected, waiting before retry");
-                thread::sleep(Duration::from_secs(2));
+                info!("{kind:?} disconnected");
+                notify(&format!("{kind:?} disconnected"));
 
                 close.store(true, Ordering::SeqCst);
             }
             None => {
-                debug!("No supported device found, retrying in 5s");
+                info!("No supported device found, retrying in 5s");
                 thread::sleep(Duration::from_secs(5));
+
+                api.refresh_devices().map_err(DeviceError::Hid)?;
             }
         }
     }
@@ -64,15 +71,16 @@ fn try_probe(api: &HidApi) -> Option<(Box<dyn Device>, DeviceKind)> {
     for kind in supported {
         trace!("Probing device: {kind:?}");
 
-        if let Ok(dev) = kind.probe(api) {
-            return Some((dev, kind));
+        match kind.probe(api) {
+            Ok(dev) => return Some((dev, kind)),
+            Err(e) => debug!("Failed to probe device: {e:?}"),
         }
     }
 
     None
 }
 
-fn run_device(dev: &dyn Device, kind: &DeviceKind) -> anyhow::Result<()> {
+fn run_device(dev: &dyn Device, kind: &DeviceKind) -> Result<(), Error> {
     let chatmix = ChatMix::new(dev.output_name())?;
     dev.enable()?;
 
@@ -91,6 +99,7 @@ fn run_device(dev: &dyn Device, kind: &DeviceKind) -> anyhow::Result<()> {
                     warn!("set_volumes failed: {e:?}");
                     break;
                 }
+                trace!("Volumes set: game={game}, chat={chat}");
             }
             Ok(None) => {}
             Err(e) => {
@@ -101,6 +110,7 @@ fn run_device(dev: &dyn Device, kind: &DeviceKind) -> anyhow::Result<()> {
     }
 
     dev.disable()?;
+
     Ok(())
 }
 

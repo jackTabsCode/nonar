@@ -1,7 +1,7 @@
 use crate::chatmix::ChatMixBackend;
+use crate::error::ChatMixError;
 use crate::{CHAT_SINK_NAME, GAME_SINK_NAME};
 use std::process::{Child, Command};
-use tracing::{info, trace};
 
 const CMD_PACTL: &str = "pactl";
 const CMD_PWLOOPBACK: &str = "pw-loopback";
@@ -13,7 +13,7 @@ pub struct ChatMix {
 }
 
 impl ChatMix {
-    fn set_sink_volume(&self, sink: &str, vol: u8) -> anyhow::Result<()> {
+    fn set_sink_volume(&self, sink: &str, vol: u8) -> Result<(), ChatMixError> {
         Command::new(CMD_PACTL)
             .args([
                 "set-sink-volume",
@@ -26,7 +26,7 @@ impl ChatMix {
 }
 
 impl ChatMixBackend for ChatMix {
-    fn new(output_name: &'static str) -> anyhow::Result<Self> {
+    fn new(output_name: &'static str) -> Result<Self, ChatMixError> {
         let game_proc = Command::new(CMD_PWLOOPBACK)
             .args([
                 "-P",
@@ -47,17 +47,13 @@ impl ChatMixBackend for ChatMix {
             ])
             .spawn()?;
 
-        info!("Created sinks");
-
         Ok(Self {
             game_proc,
             chat_proc,
         })
     }
 
-    fn set_volumes(&self, game: u8, chat: u8) -> anyhow::Result<()> {
-        trace!("Setting volumes: game={game}, chat={chat}");
-
+    fn set_volumes(&self, game: u8, chat: u8) -> Result<(), ChatMixError> {
         self.set_sink_volume(GAME_SINK_NAME, game)?;
         self.set_sink_volume(CHAT_SINK_NAME, chat)?;
 
