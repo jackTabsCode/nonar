@@ -1,3 +1,4 @@
+use derive_more::Display;
 use hidapi::HidApi;
 use nova_pro_wireless::NovaProWireless;
 use std::sync::{Arc, atomic::AtomicBool};
@@ -19,8 +20,9 @@ pub trait Device {
     fn close_handle(&self) -> Arc<AtomicBool>;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Display)]
 pub enum DeviceKind {
+    #[display("Nova Pro Wireless")]
     NovaProWireless,
 }
 
