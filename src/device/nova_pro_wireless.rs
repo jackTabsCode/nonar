@@ -89,7 +89,7 @@ impl Device for NovaProWireless {
         "SteelSeries_Arctis_Nova_Pro_Wireless"
     }
 
-    fn output_name_pretty(&self) -> String {
+    fn display_name(&self) -> String {
         self.output_name()
             .replace("SteelSeries_", "")
             .replace("_", " ")

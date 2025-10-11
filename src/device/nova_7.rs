@@ -78,7 +78,7 @@ impl Device for Nova7 {
         "SteelSeries_Arctis_Nova_7"
     }
 
-    fn output_name_pretty(&self) -> String {
+    fn display_name(&self) -> String {
         self.output_name()
             .replace("SteelSeries_", "")
             .replace("_", " ")

@@ -20,7 +20,7 @@ pub trait Device {
     fn poll_volumes(&self) -> Result<Option<(u8, u8)>, DeviceError>;
 
     fn output_name(&self) -> &'static str;
-    fn output_name_pretty(&self) -> String;
+    fn display_name(&self) -> String;
 
     fn close_handle(&self) -> Arc<AtomicBool>;
 }

@@ -39,7 +39,7 @@ fn main() -> Result<(), Error> {
     loop {
         match try_probe(&api) {
             Some((dev, _)) => {
-                info!("{} found", dev.output_name_pretty());
+                info!("{} found", dev.display_name());
 
                 let close = dev.close_handle();
 
@@ -51,8 +51,8 @@ fn main() -> Result<(), Error> {
                     }
                 }
 
-                info!("{} disconnected", dev.output_name_pretty());
-                notify(&format!("{} disconnected", dev.output_name_pretty()));
+                info!("{} disconnected", dev.display_name());
+                notify(&format!("{} disconnected", dev.display_name()));
 
                 close.store(true, Ordering::SeqCst);
             }
@@ -83,7 +83,7 @@ fn run_device(dev: &dyn Device) -> Result<(), Error> {
     let chatmix = ChatMix::new(dev.output_name())?;
     dev.enable()?;
 
-    notify(&format!("{} connected", dev.output_name_pretty()));
+    notify(&format!("{} connected", dev.display_name()));
 
     let close = dev.close_handle();
 
