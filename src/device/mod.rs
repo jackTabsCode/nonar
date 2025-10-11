@@ -1,10 +1,12 @@
-use derive_more::Display;
 use hidapi::HidApi;
+use nova_7::Nova7;
 use nova_pro_wireless::NovaProWireless;
 use std::sync::{Arc, atomic::AtomicBool};
+use strum::EnumIter;
 
 use crate::error::DeviceError;
 
+mod nova_7;
 mod nova_pro_wireless;
 
 pub trait Device {
@@ -18,20 +20,22 @@ pub trait Device {
     fn poll_volumes(&self) -> Result<Option<(u8, u8)>, DeviceError>;
 
     fn output_name(&self) -> &'static str;
+    fn display_name(&self) -> String;
 
     fn close_handle(&self) -> Arc<AtomicBool>;
 }
 
-#[derive(Debug, Display)]
+#[derive(Debug, EnumIter)]
 pub enum DeviceKind {
-    #[display("Nova Pro Wireless")]
     NovaProWireless,
+    Nova7,
 }
 
 impl DeviceKind {
     pub fn probe(&self, api: &HidApi) -> Result<Box<dyn Device>, DeviceError> {
         match self {
             DeviceKind::NovaProWireless => Ok(Box::new(NovaProWireless::new(api)?)),
+            DeviceKind::Nova7 => Ok(Box::new(Nova7::new(api)?)),
         }
     }
 }

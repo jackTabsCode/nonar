@@ -6,6 +6,7 @@ use crate::{
 use hidapi::HidApi;
 use notify_rust::Notification;
 use std::{sync::atomic::Ordering, thread, time::Duration};
+use strum::IntoEnumIterator;
 use tracing::{debug, error, info, trace, warn};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -37,12 +38,12 @@ fn main() -> Result<(), Error> {
 
     loop {
         match try_probe(&api) {
-            Some((dev, kind)) => {
-                info!("{kind:?} found");
+            Some((dev, _)) => {
+                info!("{} found", dev.display_name());
 
                 let close = dev.close_handle();
 
-                if let Err(e) = run_device(&*dev, &kind) {
+                if let Err(e) = run_device(&*dev) {
                     error!("run_device failed: {e:?}");
 
                     if let Error::ChatMix(_) = e {
@@ -50,8 +51,8 @@ fn main() -> Result<(), Error> {
                     }
                 }
 
-                info!("{kind:?} disconnected");
-                notify(&format!("{kind:?} disconnected"));
+                info!("{} disconnected", dev.display_name());
+                notify(&format!("{} disconnected", dev.display_name()));
 
                 close.store(true, Ordering::SeqCst);
             }
@@ -66,9 +67,7 @@ fn main() -> Result<(), Error> {
 }
 
 fn try_probe(api: &HidApi) -> Option<(Box<dyn Device>, DeviceKind)> {
-    let supported = [DeviceKind::NovaProWireless];
-
-    for kind in supported {
+    for kind in DeviceKind::iter() {
         trace!("Probing device: {kind:?}");
 
         match kind.probe(api) {
@@ -80,11 +79,11 @@ fn try_probe(api: &HidApi) -> Option<(Box<dyn Device>, DeviceKind)> {
     None
 }
 
-fn run_device(dev: &dyn Device, kind: &DeviceKind) -> Result<(), Error> {
+fn run_device(dev: &dyn Device) -> Result<(), Error> {
     let chatmix = ChatMix::new(dev.output_name())?;
     dev.enable()?;
 
-    notify(&format!("{kind} connected"));
+    notify(&format!("{} connected", dev.display_name()));
 
     let close = dev.close_handle();
 

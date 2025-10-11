@@ -3,50 +3,36 @@ use hidapi::{HidApi, HidDevice};
 use std::sync::{Arc, atomic::AtomicBool};
 use tracing::debug;
 
-pub struct NovaProWireless {
+pub struct Nova7 {
     dev: HidDevice,
     close: Arc<AtomicBool>,
 }
 
-impl NovaProWireless {
+impl Nova7 {
     const VID: u16 = 0x1038;
-    const PID: u16 = 0x12E0;
-    const INTERFACE: i32 = 0x4;
+    const PIDS: [u16; 6] = [
+        0x2202, // Arctis Nova 7
+        0x2206, // Arctis Nova 7X
+        0x2258, // Arctis Nova 7X v2
+        0x220a, // Arctis Nova 7P
+        0x223a, // Arctis Nova 7 Diablo IV
+        0x227a, // Arctis Nova 7 WOW Edition
+    ];
+    const INTERFACE: i32 = 0x5;
 
-    const MSGLEN: usize = 63;
+    const MSGLEN: usize = 8;
     const READ_TIMEOUT: i32 = 1000;
 
     const OPT_CHATMIX: u8 = 0x45;
-
-    const TX: u8 = 0x6;
-    const OPT_CHATMIX_ENABLE: u8 = 0x49;
-    const OPT_SONAR_ICON: u8 = 0x8D;
-
-    fn write_msg(&self, bytes: &[u8]) -> Result<(), DeviceError> {
-        let mut data = [0u8; Self::MSGLEN];
-        let len = bytes.len().min(Self::MSGLEN);
-        data[..len].copy_from_slice(bytes);
-
-        self.dev.write(&data)?;
-        Ok(())
-    }
-
-    fn set_chatmix(&self, state: bool) -> Result<(), DeviceError> {
-        self.write_msg(&[Self::TX, Self::OPT_CHATMIX_ENABLE, state as u8])
-    }
-
-    fn set_sonar_icon(&self, state: bool) -> Result<(), DeviceError> {
-        self.write_msg(&[Self::TX, Self::OPT_SONAR_ICON, state as u8])
-    }
 }
 
-impl Device for NovaProWireless {
+impl Device for Nova7 {
     fn new(api: &HidApi) -> Result<Self, DeviceError> {
         let dev = api
             .device_list()
             .find(|d| {
                 d.vendor_id() == Self::VID
-                    && d.product_id() == Self::PID
+                    && Self::PIDS.contains(&d.product_id())
                     && d.interface_number() == Self::INTERFACE
             })
             .ok_or(DeviceError::NotFound)?
@@ -59,26 +45,22 @@ impl Device for NovaProWireless {
     }
 
     fn enable(&self) -> Result<(), DeviceError> {
-        self.set_sonar_icon(true)?;
-        self.set_chatmix(true)?;
         Ok(())
     }
 
     fn disable(&self) -> Result<(), DeviceError> {
-        self.set_sonar_icon(false)?;
-        self.set_chatmix(false)?;
         Ok(())
     }
 
     fn poll_volumes(&self) -> Result<Option<(u8, u8)>, DeviceError> {
         let mut buf = [0u8; Self::MSGLEN];
         let n = self.dev.read_timeout(&mut buf, Self::READ_TIMEOUT)?;
-        if n == 0 || buf[1] != Self::OPT_CHATMIX {
+        if n == 0 || buf[0] != Self::OPT_CHATMIX {
             return Ok(None);
         }
 
-        let gamevol = buf[2];
-        let chatvol = buf[3];
+        let gamevol = buf[1];
+        let chatvol = buf[2];
 
         debug!("Received volumes: game={}, chat={}", gamevol, chatvol);
 
@@ -86,7 +68,14 @@ impl Device for NovaProWireless {
     }
 
     fn output_name(&self) -> &'static str {
-        "SteelSeries_Arctis_Nova_Pro_Wireless"
+        if let Ok(device_info) = self.dev.get_device_info() {
+            match device_info.product_id() {
+                0x2206 | 0x2258 => return "SteelSeries_Arctis_Nova_7X",
+                0x220a => return "SteelSeries_Arctis_Nova_7P",
+                _ => (),
+            }
+        }
+        "SteelSeries_Arctis_Nova_7"
     }
 
     fn display_name(&self) -> String {
@@ -100,7 +89,7 @@ impl Device for NovaProWireless {
     }
 }
 
-impl Drop for NovaProWireless {
+impl Drop for Nova7 {
     fn drop(&mut self) {
         let _ = self.disable();
     }
